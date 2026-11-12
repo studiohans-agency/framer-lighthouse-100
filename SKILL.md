@@ -53,6 +53,8 @@ jq -r '.lighthouseResult.audits[] | select(.score != null and .score < 1) | "\(.
 
 If the API is rate limited or blocked, open `https://pagespeed.web.dev/analysis?url=<URL>` in a browser tool and read the report there, or ask the owner to paste screenshots of the mobile and desktop reports.
 
+**Never copy, replay or script pagespeed.web.dev's own network requests**, for example by reading its API call from the page's network entries and firing it again with JavaScript. That reuses Google's private key for the site, and browser safety checks will rightly flag it as an attack. In a browser, run each test by loading the normal pagespeed.web.dev page and reading the result. For repeated runs, use the public API above from a shell.
+
 Run every page that matters (home, main service pages, contact), not only the home page.
 
 ### Check Framer's own optimization status
