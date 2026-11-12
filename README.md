@@ -11,7 +11,7 @@ Made by [Studio Hans](https://studiohans.agency).
 3. **Fixes what is safe**, without asking: alt text, heading tags, landmarks, button, link and form labels, image Resolution set to Auto, oversized images resized, images as WebP, videos compressed to WebM, GIF to video, deferred scripts, nested links, titles and meta descriptions, site language, favicon.
 4. **Asks before anything you would notice**: fonts, colors, animations, tickers, breakpoints, embeds, scripts and existing copy. It sends one numbered list ("reply 1 yes, 2 no"), applies what you approve, and keeps going until every item is decided.
 5. **Verifies.** Re-reads every change in Framer, checks the resolved values in the browser after you publish, and reruns PageSpeed.
-6. **Reports** in the chat and as a **PDF**: before and after scores, metrics, what was fixed, what needs your OK, what Framer controls, and the media and font inventory.
+6. **Reports in full, twice.** A detailed report in the chat: what is wrong and where, what it changed with before and after values, what it will change next, what it suggests, and what Framer controls. Plus a **PDF** of the same report, ready to download and share.
 
 It never publishes your site unless you tell it to.
 

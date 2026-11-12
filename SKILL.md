@@ -1,6 +1,6 @@
 ---
 name: framer-lighthouse-100
-description: Audit and fix a Framer website so it scores 100 in Lighthouse / PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on mobile and desktop. Measures with the PageSpeed API and in the owner's own browser, reads console and network logs, audits every image, video, font, ticker, color and meta tag on every page, fixes what is safe, asks before anything visible, keeps asking until every item is decided, and delivers a PDF report.
+description: Audit and fix a Framer website so it scores 100 in Lighthouse / PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on mobile and desktop. Measures with the PageSpeed API and in the owner's own browser, reads console and network logs, audits every image, video, font, ticker, color and meta tag on every page, fixes what is safe, asks before anything visible, keeps asking until every item is decided, and delivers a detailed report in the chat plus a downloadable PDF.
 license: MIT
 ---
 
@@ -236,9 +236,19 @@ After the owner publishes:
 
 ## Pass 5: Report
 
-Give a short report in the chat in the owner's language, and build the PDF.
+Always give **both**: a full, detailed report in the chat, and the PDF. The PDF is for keeping and sharing; the chat is where the owner reads and decides. Never reply with only "the report is ready", and never put findings only in the PDF.
 
-Chat report:
+The chat report is written in the owner's language and is as detailed as the findings need. It covers:
+
+* **Scores**, before and after, mobile and desktop, as medians, with the key metrics and the LCP element.
+* **What is wrong**: every problem found, grouped by category, each with where it is (page, section, layer or file), what it costs (score, kilobytes, seconds, contrast ratio) and how it was found (PageSpeed, browser audit, console or network log, Framer inventory). Include the problems PageSpeed did not flag.
+* **What you changed**: every fix, with the before and after value (file size and format, color and ratio, tag, text added) and how you verified it.
+* **What you will change next**, once approved or published.
+* **What you suggest**: every ❓ item as a numbered question with the change, the reason and the expected effect, so the owner can answer "1 yes, 2 no".
+* **What can't be fixed** from the project, and why.
+* **The next step**, and a line saying the PDF report is ready to download (send the file itself with it).
+
+Chat report outline:
 
 ```
 ## Lighthouse report: <site>
@@ -249,8 +259,25 @@ Chat report:
 | Mobile before / after | 75 / 100 | ... | ... | ... |
 | Desktop before / after | 88 / 100 | ... | ... | ... |
 
+Mobile: FCP 0.9 s, LCP 1.1 s (hero heading), TBT 40 ms, CLS 0, Speed Index 2.1 s
+Desktop: ...
+
+### What's wrong
+**Performance**
+* Five portfolio card images on the home page are 3000px PNGs shown at 560px (4.8 MB in total). PageSpeed didn't flag them because they load below the fold; the browser audit found them.
+* The logo ticker under the hero moves 28 elements on every frame, which keeps phones busy and holds mobile Speed Index at 5.7 s.
+* ...
+**Accessibility**
+* "Budget" field placeholder: #9CA3AF on white, 2.5:1 (needs 4.5:1). The color comes from the phone breakpoint override, not the token.
+* ...
+**Best Practices**: console errors and their source, failed requests ...
+**SEO**: pages without a meta description, listed by URL ...
+
 ### ✅ Fixed
-* Resized the five portfolio card images (PageSpeed did not flag them): 4.1 MB saved
+* Resized the five portfolio card images and served them as WebP: 4.8 MB → 0.7 MB. Checked in the network log.
+* ...
+
+### Next, once you approve or publish
 * ...
 
 ### ❓ Needs your OK
@@ -263,6 +290,8 @@ Reply with the numbers you approve, for example "1 yes, 2 no".
 
 ### Next step
 Publish, then I rerun PageSpeed 3 times on mobile and desktop.
+
+📄 The full PDF report is ready to download: Lighthouse_report_<site>.pdf
 ```
 
 PDF report: write a `report.json` (format at the top of `scripts/report.py`, example in `examples/report_example.json`) with the scores, metrics, LCP elements, fixed items, open questions, platform limits, media before and after, fonts, console findings, per page scores and optional screenshots, then:
