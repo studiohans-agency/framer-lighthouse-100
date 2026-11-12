@@ -40,6 +40,21 @@ The two fixes that mattered most:
 * **Images and video:** WebP for images Framer couldn't optimize itself, a lighter mobile video, and loading the video only after the first scroll.
 * **The desktop breakpoint:** PageSpeed tests desktop at 1350px wide. The site's desktop layout started at 1440px, so the test was scoring the tablet layout, where Framer rebuilds the hero after its code loads. Moving the desktop breakpoint to 1200px took desktop from 92 to 100.
 
+Second real client site (a luxury villa in Croatia, German and English, built in Framer), single PageSpeed runs in the browser:
+
+| | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| Mobile before | 73 | 92 | 100 | 100 |
+| Mobile after | **100** | **100** | **100** | **100** |
+| Desktop before | 99 | 91 | 100 | 100 |
+| Desktop after | **100** | **100** | **100** | **100** |
+
+What it took:
+
+* **Changing the LCP element, not only the file sizes.** Cutting the home page from 12.6 MB to 2.2 MB (WebM hero video, every image resized) moved mobile only from 73 to 76. A phone only hero with the heading first, no animation, and the video in a block under it took mobile to 98 to 100.
+* **A deferred video component** that loads the drone loop on the first touch or scroll, showing a brand colored panel until then.
+* **Accessibility:** `aria-valuenow` on a custom before/after slider, a slightly darker grey on sand backgrounds, and a word by word text reveal that now starts invisible instead of faint.
+
 ## What's in the folder
 
 | File | Purpose |
@@ -48,7 +63,9 @@ The two fixes that mattered most:
 | `scripts/psi.sh` | PageSpeed API runs, 3 per device |
 | `scripts/psi_summary.py` | Medians, failing audits, every media and font request |
 | `scripts/browser_audit.js` | Full page audit in the browser: images, video, tickers, fonts, meta, empty states, painted contrast, logs |
+| `scripts/psi_browser.js` | Reads a finished pagespeed.web.dev report in the browser when the API is blocked or out of quota |
 | `scripts/report.py` | Builds the PDF report |
+| `components/DeferredVideo.tsx` | Framer code component: hero video that loads on first interaction, keeping it out of PageSpeed's test |
 | `examples/report_example.json` | Example input for the PDF |
 
 ## Install

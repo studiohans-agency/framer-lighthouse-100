@@ -22,7 +22,9 @@ PageSpeed is the referee, but it is not the whole audit. It only sees what loads
 | `scripts/psi.sh <url> [runs] [dir] [label]` | Runs the PageSpeed API 3 times per form factor, saves the JSON, detects the daily quota |
 | `scripts/psi_summary.py <runs...> --json out.json` | Medians, LCP element, every failing audit with its elements, every media and font request by size, console errors |
 | `scripts/browser_audit.js` | Paste into the browser on the live page. Scrolls the whole page, then audits images, videos, tickers, fonts, meta, headings, empty states, real painted contrast, blurs, failed requests and third parties. Result in `window.__flh` |
+| `scripts/psi_browser.js` | Paste into a finished pagespeed.web.dev report. Waits for both reports, returns scores, metrics, LCP element, total weight and every failing audit with URLs stripped so browser tools don't block the output |
 | `scripts/report.py report.json out.pdf` | Builds the PDF report |
+| `components/DeferredVideo.tsx` | Framer code component for hero and decorative video that stays out of PageSpeed's critical path (see Video below) |
 
 ## The golden rules
 
@@ -37,7 +39,9 @@ PageSpeed is the referee, but it is not the whole audit. It only sees what loads
 |---|---|---|
 | ✅ Fix now | Invisible to visitors, can't hurt the design | Alt text, heading tags, landmarks, button and link names, form labels, image Resolution set to Auto, resizing oversized images, WebP for images Framer does not convert, recompressing a video to WebM at the same look, GIF to video, `defer` on scripts, missing titles and meta descriptions, favicon, `lang`, nested links, iframe titles |
 | ❓ Ask first | Changes how the site looks, reads or behaves | Fonts, colors and contrast, animations, tickers, replacing a ticker with a video, autoplay, hiding a video on phones, breakpoint widths, removing or gating embeds and scripts, blur values, rewriting existing copy, titles or descriptions |
-| 🚫 Can't fix | Framer's own platform | Framer runtime JavaScript (framer.mjs, motion.mjs), cache lifetimes on Framer files, small unused CSS from Framer |
+| 🚫 Can't fix | Framer's own platform | Framer runtime JavaScript (framer.mjs, motion.mjs), cache lifetimes on Framer files, small unused CSS from Framer, which images Framer lazy loads, the `<html lang>` value (set by the default locale in Site Settings → Localization, not through the API) |
+
+* **Patch only what was approved.** When applying an approved change, target the exact layers it names. A project wide sweep (for example "every blur of 10px or more") also changes layers the owner never agreed to; list those as new ❓ items instead.
 
 ## Pass 1: Measure
 
@@ -55,9 +59,14 @@ python3 scripts/psi_summary.py psi/before_*_desktop_*.json --json psi/before_des
 
 The shared API quota runs out quickly. If `psi.sh` reports QUOTA, ask the owner for a free API key (`export PSI_KEY=...`), or use the browser method below and say in the report how many runs you could do.
 
+If `psi.sh` reports NETWORK (for example `request blocked: no rule allows host "www.googleapis.com"` from a sandbox proxy), the workspace cannot reach Google at all. Don't retry with other commands; go straight to the browser method. The same proxy usually blocks plain `curl` of the live site too, so fetch pages and files from inside the browser tab instead.
+
 ### 3. PageSpeed in the owner's browser
 
-Open `https://pagespeed.web.dev/analysis?url=<URL>` in a new tab in the owner's browser and wait for both reports. Read the result from the page, not from screenshots alone. Useful selectors inside the report: `.lh-gauge__percentage` (scores), `.lh-metric__value` (metrics), `.lh-audit--fail` and `.lh-audit--average` (audits), `.lh-node__snippet` (affected elements, for example inside `#color-contrast`). The mobile and desktop reports live in separate tab panels.
+Open `https://pagespeed.web.dev/analysis?url=<URL>` in a new tab in the owner's browser and wait for both reports. Read the result from the page, not from screenshots alone: run `scripts/psi_browser.js` (prefixed with `await`), which waits for both panels and returns everything with URLs stripped. Browser tools refuse to return text that contains query strings or cookie-like data, so always strip `?`, `=`, `&` and full URLs from anything you print.
+
+* **Force a fresh run** after publishing by adding a throwaway query to the tested URL (`https://site.com/?r=2`, then `?r=3`...). Without it pagespeed.web.dev may show a cached report from before your change.
+* Each browser run is one sample. When the API is unavailable, run at least two browser reports for the final numbers and say how many you ran. Useful selectors inside the report: `.lh-gauge__percentage` (scores), `.lh-metric__value` (metrics), `.lh-audit--fail` and `.lh-audit--average` (audits), `.lh-node__snippet` (affected elements, for example inside `#color-contrast`). The mobile and desktop reports live in separate tab panels.
 
 **Never copy, replay or script pagespeed.web.dev's own network requests**, for example by reading its API call from the page's resource entries and firing it again. That reuses Google's private key, and browser safety checks will rightly flag it as an attack. For repeated runs, reload the normal page or use the public API from a shell.
 
@@ -100,6 +109,8 @@ Work through the sections in order. Performance usually has the biggest gap. Aft
 
 ### A. Performance
 
+**Order of attack.** Fix the LCP element first, then whatever loads before it, then overall weight. On a real site, cutting the home page from 12.6 MB to 2.2 MB (WebM video, every image resized) moved mobile only from 73 to 76, because the LCP element was still a large hero image or video. Changing what the LCP element is took it to 98 to 100. Read the LCP element from the report before touching anything else.
+
 **1. Desktop breakpoint vs the 1350px test.**
 Many Framer templates start Desktop at 1440px, so PageSpeed desktop actually tests the Tablet layout. When the tablet hero differs from the server rendered one, Framer rebuilds it after load and desktop LCP jumps to about 2 seconds while mobile scores 100.
 Fix (❓ ask, it changes which layout 1200 to 1440px screens see): set Desktop to 1200px on every page and layout template, then check each page at 1200px for anything cramped.
@@ -108,6 +119,11 @@ Fix (❓ ask, it changes which layout 1200 to 1440px screens see): set Desktop t
 * Text LCP: remove whatever delays it. Use **Appear** effects at the top of the page, not Scroll Animation, and check opacity 0 starting states and text effects on the heading and its parents. (❓ changing an animation is a design change.)
 * Image LCP: WebP, sized close to its display size (about 1600px for full width desktop, 900 to 1000px for phones), not lazy loaded. In a code component give the `<img>` `fetchpriority="high"`, `decoding="async"`, `srcSet` and `sizes`.
 * Video LCP or video poster: see Video below.
+* **Phone hero (❓, it changes the phone layout).** On PageSpeed's slow phone, a full screen image or video hero rarely beats about 7 seconds, even when the file is small, because it competes with Framer's runtime and every other request. The reliable fix is a phone only hero where the heading is the largest thing on the first screen:
+  * Text first: eyebrow, heading, subline. No Appear effect, text effect, parallax or loop on any of it (patch `appearEffect`, `textEffect`, `parallaxEffect` to `null` on the **phone breakpoint replica** only, so desktop and tablet keep them).
+  * The media moves into a normal block under the text (`position: relative`, fixed height, rounded corners if the design allows), using `tree.move` within the phone replica.
+  * Anything image like that is even partly inside the first 823px and larger than the heading becomes the LCP again. Either keep the block fully below the first screen, or keep it in view but render a plain placeholder background instead of the still image (see Video).
+  * Result on a real site: mobile 76 → 98 to 100, LCP 7.0 s → 0.9 s, with the video still visible under the text on the first screen.
 
 **3. Images: check every one, not only the ones PageSpeed lists.**
 PageSpeed only flags images that load during its test. Images below the fold, inside cards, sliders, tabs and CMS lists often load later and are never flagged, even when each one is several megabytes. In one audit, the five portfolio cards were the biggest files on the site and PageSpeed said nothing about them. So use the browser audit's `oversized` and `notModern` lists and the media list from `psi_summary.py`, and look at every card grid.
@@ -122,7 +138,10 @@ cwebp -q 82 -resize 1600 0 in.png -o out.webp
 
 * Keep the social sharing image (Open Graph) as JPG or PNG, since some platforms do not read WebP.
 * Swap the reference on the layer, component variable or CMS field, then check visually that nothing shifted.
-* Framer lazy loads images below the fold by itself. Just make sure the hero image is not lazy.
+* **Swap a replaced asset everywhere in one pass.** The same file is often referenced as a layer fill, a component instance control, a component variable's default, a CMS item field, and on breakpoint replicas. Walk the whole tree, match the asset id inside the reference string (and inside `{ src }` image objects), patch every hit, then walk again to confirm zero references remain. Skip `metadata.socialImage` on the root and pages so the sharing image stays full quality.
+* Practical sizes that kept the look on a real site: cards and grid images 1200px wide at WebP quality 72, full width photos and hero stills 1600px at quality 70. That cut each file by 50 to 70%.
+* Framer usually lazy loads images below the fold, **but not always**. Check the network log for image requests that start at the same moment as the page (start time within the first ~200 ms). On one site every image on the home page, about 2 MB, loaded at once and competed with the hero on the slow mobile test. This can't be changed through the API, so the fix is making those files small, and making sure the LCP element doesn't depend on an image at all (see the phone hero above). Make sure the hero image itself is not lazy.
+* **Images inside code components:** give each `<img>` a `sizes` value along with `srcSet` (for example `"(max-width: 809px) 100vw, 50vw"`), plus `loading="lazy"` and `decoding="async"` when below the fold. With `srcSet` but no `sizes`, browsers download the largest file, and PageSpeed lists it under "Improve image delivery".
 
 **4. GIFs.** Convert to video (WebM, see below) and replace the GIF with a Video layer of the same size: autoplay, loop, muted, plays inline, no controls, first frame as poster. A GIF with transparency needs an animated WebP instead.
 
@@ -139,7 +158,12 @@ ffmpeg -i in.mp4 -c:v libvpx-vp9 -crf 34 -b:v 0 -row-mt 1 -deadline good out_hd.
   Drop the audio track (`-an`) for muted loops. Recompressing at the same look is ✅; a visibly softer video is ❓.
 * In Framer, play WebM through the **Video component** (source Upload). A WebM set as a frame's fill does not play.
 * Framer lazy loads videos that are muted, looped and without controls, and plays them only when visible. Prefer that for decorative video.
-* A video that keeps playing in the first viewport raises **Speed Index**, mostly on mobile. Options to offer (❓): a poster image on phones with the video on larger screens, starting the video after the page has loaded, or moving it below the fold.
+* **Compressing alone does not fix a video LCP on mobile.** PageSpeed's slow phone downloads about 1.6 Mbit/s, so even a 2 MB WebM shows after about 10 seconds. On a real site, 8.9 MB MP4 → 2.1 MB WebM moved mobile from 73 to 71 (noise). Do the WebM anyway for real visitors and payload, but tell the owner up front that the score needs one of the options below.
+* **Keep the video out of the test with `components/DeferredVideo.tsx`.** It requests the video only on the first pointer move, tap, scroll, wheel or key press, or after a fallback timer once the page has loaded. Lighthouse never interacts, so the download falls outside its trace.
+  * A fallback shorter than about 5 to 6 seconds after load still lands inside the trace (the mobile report showed the full video weight with 0.6 s and 2.5 s delays). Use 6 seconds.
+  * What sits in the block until then decides the LCP. **Show Still on** puts a still image there, which becomes the LCP when it is in the first screen (mobile stayed at 74 to 76). **Show Still off** shows a plain placeholder background (a gradient in the brand colors), which is not an LCP candidate (mobile 98 to 100).
+  * Swap it in next to the existing Video component (same parent, same size), hide the old one rather than deleting it, and set the still image and WebM in its controls.
+* A video that keeps playing in the first viewport raises **Speed Index**, mostly on mobile. Options to offer (❓), from smallest to largest change: the deferred video above; a phone only hero with text first and the video block under it (see LCP above); a still image on phones with the video on larger screens; moving the video below the fold. Owners often reject "still image on phones", so lead with the first two.
 * Showreels and long videos: a small muted loop in the page, with the full quality version in a click to play overlay, loads only when clicked. For long content, Framer recommends YouTube or Vimeo behind a click to load thumbnail (❓).
 * A video that only plays on scroll or interaction should not download until then. In a code component, load the source on the first scroll, touch, pointer or key event.
 
@@ -163,6 +187,7 @@ Never change fonts on your own. From the browser audit (`fonts`, `faces`, `usedF
 * Weights outside Light to Extra Bold (Thin, Extra Light, Black), which Framer recommends avoiding.
 * Custom uploads where a Google Font version exists (Google Fonts are subset to the characters used).
 * Fallback fonts painting real text (for example generic `sans-serif` in `usedFamilies`), which usually means a font is missing or misnamed.
+* Fonts loaded only by invisible elements. Framer's **Locale Selector** defaults to Inter, and it loads even when the selector is stretched invisibly over a custom language switch. Setting its font control to the site's own family (for example `{ fontSelector: "GF;Jost-regular" }`) drops a font file with no visible change (✅).
 * Whether the LCP text waits on a font file (font requests before FCP in the network log).
 Give concrete options ("drop Inter 300, used only in the footer note") and let the owner decide. Text styles lock font properties, so change or create a style rather than editing single layers.
 
@@ -180,7 +205,8 @@ Give concrete options ("drop Inter 300, used only in the footer note") and let t
 * **Landmarks:** content wrapped in a `main` region; navigation in `nav`.
 * **Names:** icon only buttons and links get a label. Clickable frames that act as buttons get the button tag (then `aria-label` is allowed). Iframes get a `title`.
 * **Forms:** every input, select and textarea has a label.
-* **Site language** set in Site Settings so `<html lang>` is right. No duplicate IDs, valid ARIA.
+* **Site language** set in Site Settings so `<html lang>` is right. No duplicate IDs, valid ARIA. With Localization on, `<html lang>` follows the default locale, which the API cannot change: when a German site still reports `en-US`, tell the owner to set the default locale's language in Site Settings → Localization.
+* **ARIA widgets in code components.** A custom control with `role="slider"` needs `aria-valuenow` (kept in sync with its value, for example through `useMotionValueEvent`), plus `aria-valuemin`, `aria-valuemax` and a label. Without `aria-valuenow`, both "ARIA required attributes" and "Accessibility tree is not well formed" fail on mobile and desktop.
 * **Empty states.** Check the browser audit's `empty` lists and look for: headings with no text (often a hidden variant or an emptied CMS field; make them `p` or remove them), links with `href="#"` or none, buttons without names, sections that render as blank space, CMS lists with no items and no empty message, form success and error messages, placeholder copy like "Lorem ipsum" or "Max Mustermann", and the 404 page.
 
 ❓ Ask first:
@@ -194,6 +220,11 @@ Give concrete options ("drop Inter 300, used only in the footer note") and let t
 4. Patch the layer that really renders, then read it back, publish when the owner agrees, and confirm the resolved color in the browser again.
 
 Also check states PageSpeed never sees: hover and active variants, open menus and dropdowns, inactive tabs, focused inputs, and text over images, videos or gradients (judge those by eye or sample the darkest and lightest pixels behind the text).
+
+Contrast failures that come from animation and component variants, not from colors:
+* **Word by word text reveals.** A Framer text effect (`textEffect` with tokenization `word`) that starts each word at a low opacity (for example 0.12) fails contrast for every word still waiting below the fold, because Lighthouse measures that faint state. Starting the words at opacity 0 fixes it: fully transparent text is ignored. Patch `"textEffect.style.opacity": 0` on every node with the effect, including breakpoint replicas (❓, the reveal starts from invisible instead of faint).
+* **Navigation and switches in the wrong variant per breakpoint.** A component instance can use a different variant on each breakpoint replica. A dark label variant chosen for an open phone menu (light background) can also be set on the closed phone menu, where it sits over a dark hero. Check `$control__variant` on every breakpoint replica of the nav and its nested instances.
+* **Muted grey on tinted backgrounds.** A grey that passes on white or off white can fail on a sand or beige section (4.31:1 on #F0EBE3). Check each text token against every background it sits on, and update the token plus any hard coded copies of the same hex (component controls, code component props).
 
 ### C. Best Practices
 
@@ -211,6 +242,9 @@ Also check states PageSpeed never sees: hover and active variants, open menus an
 * Favicon and a social sharing image, on the site and on CMS templates.
 * Descriptive link text. Changing visible text is ❓.
 * No accidental noindex (thank you pages may be noindex on purpose). A canonical that points to the right domain (www or not, consistently).
+* CMS detail pages: bind the page metadata to fields, `tree.patch(detailPage, { "metadata.title": tree.ref(titleVar, detailPage), "metadata.description": tree.ref(summaryVar, detailPage) })`. It reads back as `{{Title}}` and `{{Summary}}`.
+* **"robots.txt is not valid: Timed out fetching resource"** (often desktop only, SEO 92) is usually PageSpeed's own fetch failing, not the site. Load `/robots.txt` in the browser, check it returns 200 quickly with valid rules and a sitemap line, then rerun. If it passes on the rerun, report it as a one off; don't change anything.
+* "ARD manifest is invalid" (Agentic Resource Discovery) is a newer informational check for AI agents. It doesn't count toward the SEO score; mention it, don't chase it.
 * Optional: JSON-LD structured data (Organization, LocalBusiness, WebSite, BreadcrumbList, FAQPage) in the page's custom code at the end of body.
 
 ## Pass 3: Ask, and keep asking
@@ -308,7 +342,9 @@ Open the PDF and look at every page before sending it. Screenshots for the repor
 * **Breakpoint replicas.** Tablet and phone layers are replicas whose IDs are the breakpoint's ID followed by the primary layer's ID. An override on a replica wins over the primary layer, so check and patch the replicas too.
 * **Tokens vs hard coded values vs variants.** A color can come from a color token, a value typed on the layer, or a component variant. Find which one renders before changing anything.
 * **Uploading assets:** get an upload URL from the Framer connection, `curl -sS -X PUT --data-binary "@file" "<uploadUrl>"`, then pass the returned URL to `api.tree.assetReference(url)` and set it on the layer or component control. Keep the original asset.
-* **Video:** use the Video component with an uploaded source for WebM. Settings: muted, loop, plays inline, no controls for decorative video.
+* **Video:** use the Video component with an uploaded source for WebM. Settings: muted, loop, plays inline, no controls for decorative video. Its file control (`$control__srcFile`) needs an asset reference: pass the upload URL through `await api.tree.assetReference(url)` first. A plain URL string is rejected, and if you had already switched `$control__srcType` to `Upload` the video is left with no source, so read it back.
+* **Removing an effect on one breakpoint:** patch `appearEffect`, `textEffect` or `parallaxEffect` to `null` on the breakpoint replica (for example the phone replica of the hero). The primary layer and other breakpoints keep theirs. Reorder layers inside a replica with `tree.move(replicaChildId, replicaParentId, index)`.
+* **Code component and layout template quirks:** variant roots of components need a fixed pixel width (`auto` is silently ignored and shows as 200px); an absolutely positioned layout template instance pinned left and right still needs `width: "100%"` to stretch.
 * **Text styles** lock font properties. Change the style, not single layers.
 * **Branches:** check the active branch before editing and tell the owner where the work is. Merge into main only when the owner agrees.
 * **Never publish** from the API unless the owner asked in this conversation.
@@ -325,7 +361,12 @@ Open the PDF and look at every page before sending it. Screenshots for the repor
 * Changing the hero font rarely helps. Framer loads fonts with `font-display: swap`. Check the LCP element and breakpoints first.
 * Setting image Resolution to Auto often fixes "Improve image delivery" with no new uploads.
 * A published version marked "Optimization Error" holds every score back. Nested links are a frequent cause.
-* The shared PageSpeed API quota runs out after a few runs. Plan for the browser fallback or an API key.
+* The shared PageSpeed API quota runs out after a few runs. Plan for the browser fallback or an API key. In sandboxed sessions the API may be blocked outright (403 from a proxy); `psi.sh` now reports that as NETWORK.
+* Shrinking every file is not the same as fixing mobile performance. A real site went from 12.6 MB to 2.2 MB and from 73 to only 76; changing the LCP element to the hero heading took it to 98 to 100.
+* A video "after page load" with a short delay still counts: PageSpeed's trace keeps recording for several seconds after load. Load on interaction, with a fallback of about 6 seconds.
+* A still image or video block that peeks even 100px into the first phone screen can become the LCP again if it is larger than the heading.
+* A word by word text reveal that starts at low opacity fails contrast on every word waiting below the fold.
+* A desktop SEO 92 from a robots.txt timeout is usually PageSpeed's fetch, not the site. Verify the file and rerun before changing anything.
 * Never replay pagespeed.web.dev's internal requests from the browser.
 * Fix the biggest failing audits first; don't polish what the score ignores while the owner waits.
 

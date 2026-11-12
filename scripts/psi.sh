@@ -24,6 +24,8 @@ for s in mobile desktop; do
 try:
   raw=open(sys.argv[1]).read()
   if not raw.strip(): print("no response: the network may block googleapis.com here")
+  elif not raw.lstrip().startswith("{") and ("blocked" in raw.lower() or "forbidden" in raw.lower() or "proxy" in raw.lower()):
+    print("no response: a proxy or firewall blocks googleapis.com here (" + raw.strip()[:80] + ")")
   else:
     d=json.loads(raw); print(d.get("error",{}).get("message","unknown error")[:200])
 except Exception as e: print("not json:",e)' "$f")
