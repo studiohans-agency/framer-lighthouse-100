@@ -1,0 +1,29 @@
+{
+  "site": "example.framer.website",
+  "date": "12 November 2026",
+  "summary": "Mobile Performance was held back by a scrolling logo ticker and five oversized portfolio images. Accessibility had one contrast failure inside a dropdown. Both are fixed; the ticker swap is waiting for your OK.",
+  "scores": {
+    "mobile":  {"before": {"performance": 78, "accessibility": 96, "best-practices": 100, "seo": 92},
+                "after":  {"performance": 97, "accessibility": 100, "best-practices": 100, "seo": 100}},
+    "desktop": {"before": {"performance": 89, "accessibility": 96, "best-practices": 100, "seo": 92},
+                "after":  {"performance": 100, "accessibility": 100, "best-practices": 100, "seo": 100}}
+  },
+  "metrics": {"mobile": {"FCP": 900, "LCP": 1300, "TBT": 120, "CLS": 0.01, "Speed Index": 2100},
+              "desktop": {"FCP": 300, "LCP": 500, "TBT": 0, "CLS": 0, "Speed Index": 600}},
+  "lcp": {"mobile": "Hero heading (text)", "desktop": "Hero heading (text)"},
+  "fixed": [
+    {"title": "Five portfolio card images resized", "detail": "Each was 3000px wide shown at 560px. PageSpeed did not flag them because they load below the fold. 4.1 MB saved."},
+    {"title": "Contrast in the Budget dropdown", "detail": "The option text resolved to #9CA3AF on white (2.5:1) through a component variant, not the token. Now #4B5563 (7.6:1)."},
+    {"title": "Meta descriptions on 9 pages", "detail": "Including the blog article template, 404 and both legal pages."}
+  ],
+  "ask": [
+    {"title": "Replace the logo ticker with a looping video", "why": "The ticker animates 28 elements on every frame, which adds blocking time on phones.", "impact": "Mobile Performance +5 to 8. I can make the video for you."},
+    {"title": "Drop the Inter 300 weight", "why": "It is used only in the footer note.", "impact": "One fewer font file."}
+  ],
+  "cant": [{"title": "Reduce unused JavaScript", "detail": "framer.mjs is Framer's own runtime."}],
+  "media": [{"item": "Hero showreel", "before": "6.2 MB MP4, 1920 px", "after": "1.4 MB WebM, 1080 px"},
+            {"item": "Portfolio cards (5)", "before": "4.8 MB PNG", "after": "0.7 MB WebP"}],
+  "fonts": [{"font": "Inter 300, 400, 500", "note": "WOFF2, 3 files"}, {"font": "Instrument Serif 400", "note": "WOFF2"}],
+  "console": ["No errors after the fixes. Before: 2 errors from an unused Calendly embed."],
+  "next": ["Approve or decline the two questions above", "Publish, then rerun PageSpeed 3 times on mobile and desktop"]
+}

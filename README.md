@@ -1,17 +1,28 @@
 # Framer Lighthouse 100
 
-An open source Claude skill that audits a Framer website and works toward a perfect **100 / 100 / 100 / 100** in PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on **mobile and desktop**.
+An open source Claude skill that audits a Framer website and works toward a perfect **100 / 100 / 100 / 100** in PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on **mobile and desktop**, and hands you a PDF report at the end.
 
 Made by [Studio Hans](https://studiohans.agency).
 
 ## What it does
 
-1. **Measures** every important page 3 times on mobile and desktop and records the scores, the LCP element and every failing audit.
-2. **Fixes what is safe** without asking: alt text, heading tags, image resolution set to Auto, WebP where Framer can't optimize, GIF to video, deferred scripts, missing titles and descriptions, button and link names, site language, favicon.
-3. **Asks before changing the design**: fonts, colors, animations, breakpoints, scripts, embeds and existing copy.
-4. **Reports** before and after scores, what it fixed, what needs your OK, and what Framer's platform controls.
+1. **Measures properly.** Runs PageSpeed 3 times per device through the API, and also in your own browser on pagespeed.web.dev. Opens your live site, scrolls every page to the bottom, and reads the console and network logs.
+2. **Finds what PageSpeed misses.** Checks every image (including cards and sliders far down the page that PageSpeed never flags), every video, ticker, font, blur, embed and script. Checks contrast using the colors your browser actually paints, and finds empty states and missing meta descriptions on every page, CMS template, 404 page, legal page and locale.
+3. **Fixes what is safe**, without asking: alt text, heading tags, landmarks, button, link and form labels, image Resolution set to Auto, oversized images resized, images as WebP, videos compressed to WebM, GIF to video, deferred scripts, nested links, titles and meta descriptions, site language, favicon.
+4. **Asks before anything you would notice**: fonts, colors, animations, tickers, breakpoints, embeds, scripts and existing copy. It sends one numbered list ("reply 1 yes, 2 no"), applies what you approve, and keeps going until every item is decided.
+5. **Verifies.** Re-reads every change in Framer, checks the resolved values in the browser after you publish, and reruns PageSpeed.
+6. **Reports** in the chat and as a **PDF**: before and after scores, metrics, what was fixed, what needs your OK, what Framer controls, and the media and font inventory.
 
 It never publishes your site unless you tell it to.
+
+### Things it catches that a PageSpeed score alone doesn't
+
+* Five portfolio card images of several megabytes each, below the fold, never flagged by PageSpeed.
+* A contrast failure that survived a color fix, because the color the browser painted came from a different layer than the one that was changed. The skill now inspects the exact nodes and their resolved colors instead of assuming.
+* A logo ticker that keeps phones busy on every frame. It suggests swapping it for a looping video of the same ticker, and can make that video for you.
+* A hero video that keeps the mobile Speed Index high even though the page loads fast.
+* Fonts that are not WOFF2, weights used once, and fallback fonts painting real text.
+* Missing meta descriptions on CMS articles, the 404 page and legal pages.
 
 ## Results
 
@@ -29,13 +40,26 @@ The two fixes that mattered most:
 * **Images and video:** WebP for images Framer couldn't optimize itself, a lighter mobile video, and loading the video only after the first scroll.
 * **The desktop breakpoint:** PageSpeed tests desktop at 1350px wide. The site's desktop layout started at 1440px, so the test was scoring the tablet layout, where Framer rebuilds the hero after its code loads. Moving the desktop breakpoint to 1200px took desktop from 92 to 100.
 
+## What's in the folder
+
+| File | Purpose |
+|---|---|
+| `SKILL.md` | The instructions Claude follows |
+| `scripts/psi.sh` | PageSpeed API runs, 3 per device |
+| `scripts/psi_summary.py` | Medians, failing audits, every media and font request |
+| `scripts/browser_audit.js` | Full page audit in the browser: images, video, tickers, fonts, meta, empty states, painted contrast, logs |
+| `scripts/report.py` | Builds the PDF report |
+| `examples/report_example.json` | Example input for the PDF |
+
 ## Install
 
-**Claude (claude.ai, desktop app):** Settings → Capabilities → Skills → upload the `framer-lighthouse-100` folder as a zip. Or paste the contents of `SKILL.md` into a new skill.
+**Claude (claude.ai, desktop app):** Settings → Capabilities → Skills → upload the `framer-lighthouse-100` folder as a zip.
 
 **Claude Code:** copy the folder to `~/.claude/skills/framer-lighthouse-100/`.
 
-For the fixes, connect Claude to your Framer project (the Framer MCP server or the Framer plugin). Without it, the skill still measures and gives you step by step instructions.
+For the fixes, connect Claude to your Framer project (the Framer MCP server or the Framer plugin). For the browser checks, use Claude in Chrome or the Claude desktop app's browser. Without them, the skill still measures and gives you step by step instructions.
+
+For the PDF, the report script uses Playwright, Chrome or WeasyPrint, whichever is installed.
 
 ## Use
 
