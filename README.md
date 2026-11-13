@@ -11,13 +11,6 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
-<p align="center">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0E1410?labelColor=A8956A">
-  <img alt="Claude skill" src="https://img.shields.io/badge/Claude-skill-0E1410?labelColor=A8956A">
-  <img alt="Built for Framer" src="https://img.shields.io/badge/built%20for-Framer-0E1410?labelColor=A8956A">
-  <img alt="No npm install" src="https://img.shields.io/badge/npm-not%20needed-0E1410?labelColor=A8956A">
-</p>
-
 # Framer Lighthouse 100
 
 A Claude skill that audits a website built in Framer and works toward **100 / 100 / 100 / 100** in Google PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on **mobile and desktop**. It fixes what is safe on its own, asks before anything you would notice, and gives you a detailed report in the chat plus a PDF.
