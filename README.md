@@ -1,8 +1,28 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Framer Lighthouse 100: a Claude skill that audits Framer sites and gets them to 100 in PageSpeed" width="100%">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#tips-and-example-requests">Tips</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="SKILL.md">SKILL.md</a> ·
+  <a href="https://github.com/studiohans-agency/framer-lighthouse-100/releases/latest">Latest release</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0E1410?labelColor=A8956A">
+  <img alt="Claude skill" src="https://img.shields.io/badge/Claude-skill-0E1410?labelColor=A8956A">
+  <img alt="Built for Framer" src="https://img.shields.io/badge/built%20for-Framer-0E1410?labelColor=A8956A">
+  <img alt="No npm install" src="https://img.shields.io/badge/npm-not%20needed-0E1410?labelColor=A8956A">
+</p>
+
 # Framer Lighthouse 100
 
-An open source Claude skill that audits a Framer website and works toward a perfect **100 / 100 / 100 / 100** in PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on **mobile and desktop**, and hands you a PDF report at the end.
+A Claude skill that audits a website built in Framer and works toward **100 / 100 / 100 / 100** in Google PageSpeed Insights (Performance, Accessibility, Best Practices, SEO) on **mobile and desktop**. It fixes what is safe on its own, asks before anything you would notice, and gives you a detailed report in the chat plus a PDF.
 
-Made by [Studio Hans](https://studiohans.agency).
+Made by [Studio Hans](https://studiohans.agency), a Framer studio in Hamburg.
 
 ## What it does
 
@@ -15,10 +35,15 @@ Made by [Studio Hans](https://studiohans.agency).
 
 It never publishes your site unless you tell it to.
 
+<p align="center">
+  <img src="assets/report-preview.png" alt="First page of the PDF report: before and after scores and metrics" width="560">
+  <br><sub>The first page of the PDF report (example data)</sub>
+</p>
+
 ### Things it catches that a PageSpeed score alone doesn't
 
 * Five portfolio card images of several megabytes each, below the fold, never flagged by PageSpeed.
-* A contrast failure that survived a color fix, because the color the browser painted came from a different layer than the one that was changed. The skill now inspects the exact nodes and their resolved colors instead of assuming.
+* A contrast failure that survived a color fix, because the color the browser painted came from a different layer than the one that was changed. The skill inspects the exact nodes and their resolved colors instead of assuming.
 * A logo ticker that keeps phones busy on every frame. It suggests swapping it for a looping video of the same ticker, and can make that video for you.
 * A hero video that keeps the mobile Speed Index high even though the page loads fast.
 * Fonts that are not WOFF2, weights used once, and fallback fonts painting real text.
@@ -55,33 +80,131 @@ What it took:
 * **A deferred video component** that loads the drone loop on the first touch or scroll, showing a brand colored panel until then.
 * **Accessibility:** `aria-valuenow` on a custom before/after slider, a slightly darker grey on sand backgrounds, and a word by word text reveal that now starts invisible instead of faint.
 
+## Install
+
+### Option A: let Claude install it (Claude Code)
+
+Paste this into Claude Code:
+
+```text
+Install the Claude skill from https://github.com/studiohans-agency/framer-lighthouse-100.
+Clone it into ~/.claude/skills/framer-lighthouse-100, or pull the latest version if that folder
+already exists. Then confirm that SKILL.md is in the folder.
+```
+
+Restart Claude Code so it loads the skill.
+
+### Option B: install it yourself (Claude Code)
+
+```bash
+git clone https://github.com/studiohans-agency/framer-lighthouse-100.git ~/.claude/skills/framer-lighthouse-100
+```
+
+Or download `framer-lighthouse-100-v*.zip` from the [latest release](https://github.com/studiohans-agency/framer-lighthouse-100/releases/latest) and unzip it:
+
+```bash
+unzip framer-lighthouse-100-v*.zip -d ~/.claude/skills/
+```
+
+To update later: `git -C ~/.claude/skills/framer-lighthouse-100 pull`
+
+### Option C: Claude app (claude.ai, desktop and mobile)
+
+1. Download `framer-lighthouse-100-v*.zip` from the [latest release](https://github.com/studiohans-agency/framer-lighthouse-100/releases/latest).
+2. In Claude, open **Settings → Capabilities → Skills** and upload the zip.
+3. Make sure code execution is turned on, since the skill runs small scripts.
+
+### What you need
+
+**No npm package and no build step.** The skill is a folder of instructions and small scripts that Claude runs itself. Nothing is installed into your project, and nothing is added to your Framer site.
+
+| | Needed? | What for |
+|---|---|---|
+| Claude with code execution | Required | Running the skill and its scripts |
+| A connection to your Framer project (Framer MCP server or Framer plugin) | Recommended | Making the fixes. Without it, the skill measures and gives you step by step instructions instead |
+| A browser tool: Claude in Chrome or the Claude desktop app's browser | Recommended | PageSpeed in your browser, the full page audit, console and network logs |
+| Python 3 | Required for the scripts | `psi_summary.py`, `report.py` |
+| Playwright, Chrome or WeasyPrint | For the PDF | `report.py` uses whichever is installed |
+| `ffmpeg` | For video fixes | Converting videos to WebM |
+| `cwebp` or `sharp` | For image fixes | Converting images Framer doesn't optimize to WebP |
+| A free Google PageSpeed API key | Optional | Avoids the shared daily quota. Set `PSI_KEY` |
+
+## Tips and example requests
+
+* You don't have to name the skill. Asking about PageSpeed, Lighthouse, site speed or accessibility on a Framer site triggers it.
+* Give it the live URL. With the Framer project connected too, it can fix things directly.
+* Answer its questions with the numbers, for example "1 yes, 2 no, 3 yes". It keeps going until every item is decided.
+* It never publishes. Publish yourself when you're happy, then ask it to verify.
+
+Example requests:
+
+```text
+Use the framer-lighthouse-100 skill on https://yoursite.com
+```
+
+```text
+My Framer site scores 74 on mobile in PageSpeed. Get it to 100 without changing the design.
+```
+
+```text
+Audit every page of https://yoursite.com for accessibility and SEO, and send me the PDF report.
+```
+
+```text
+Check why my desktop score is stuck at 90 while mobile is 100.
+```
+
+## How it works
+
+| Pass | What happens |
+|---|---|
+| 1. Measure | PageSpeed through the API and in your browser, 3 runs each. A full page browser audit of every page. Console and network logs. An inventory of the Framer project: breakpoints, images, videos, tickers, fonts, code, SEO settings |
+| 2. Fix | Performance, Accessibility, Best Practices and SEO, in that order. Every change is read back to confirm it landed, including tablet and phone overrides |
+| 3. Ask | One numbered list of everything that changes the look or behavior, repeated until every item has a yes or a no |
+| 4. Verify | After you publish: PageSpeed again, the browser audit again, and the real painted values of every change |
+| 5. Report | A detailed report in the chat and a PDF to download |
+
+Each finding goes into one of three buckets:
+
+| Bucket | Meaning |
+|---|---|
+| ✅ Fix now | Invisible to visitors, can't hurt the design |
+| ❓ Ask first | Changes how the site looks, reads or behaves |
+| 🚫 Can't fix | Controlled by Framer's platform, explained in the report |
+
 ## What's in the folder
 
 | File | Purpose |
 |---|---|
-| `SKILL.md` | The instructions Claude follows |
-| `scripts/psi.sh` | PageSpeed API runs, 3 per device |
-| `scripts/psi_summary.py` | Medians, failing audits, every media and font request |
-| `scripts/browser_audit.js` | Full page audit in the browser: images, video, tickers, fonts, meta, empty states, painted contrast, logs |
-| `scripts/psi_browser.js` | Reads a finished pagespeed.web.dev report in the browser when the API is blocked or out of quota |
-| `scripts/report.py` | Builds the PDF report |
-| `components/DeferredVideo.tsx` | Framer code component: hero video that loads on first interaction, keeping it out of PageSpeed's test |
-| `examples/report_example.json` | Example input for the PDF |
+| [`SKILL.md`](SKILL.md) | The instructions Claude follows |
+| [`scripts/psi.sh`](scripts/psi.sh) | PageSpeed API runs, 3 per device |
+| [`scripts/psi_summary.py`](scripts/psi_summary.py) | Medians, failing audits, every media and font request |
+| [`scripts/browser_audit.js`](scripts/browser_audit.js) | Full page audit in the browser: images, video, tickers, fonts, meta, empty states, painted contrast, logs |
+| [`scripts/psi_browser.js`](scripts/psi_browser.js) | Reads a finished pagespeed.web.dev report in the browser when the API is blocked or out of quota |
+| [`scripts/report.py`](scripts/report.py) | Builds the PDF report |
+| [`components/DeferredVideo.tsx`](components/DeferredVideo.tsx) | Framer code component: hero video that loads on first interaction, keeping it out of PageSpeed's test |
+| [`examples/report_example.json`](examples/report_example.json) | Example input for the PDF |
 
-## Install
+## Contributing
 
-**Claude (claude.ai, desktop app):** Settings → Capabilities → Skills → upload the `framer-lighthouse-100` folder as a zip.
+Ideas, fixes and audit results from your own Framer sites are very welcome.
 
-**Claude Code:** copy the folder to `~/.claude/skills/framer-lighthouse-100/`.
+* **Found a gap?** Open an [issue](https://github.com/studiohans-agency/framer-lighthouse-100/issues/new/choose) with the URL, the scores and the audit that wouldn't clear.
+* **Share a result.** Before and after scores help everyone see what works.
+* **Improve the skill.** Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
-For the fixes, connect Claude to your Framer project (the Framer MCP server or the Framer plugin). For the browser checks, use Claude in Chrome or the Claude desktop app's browser. Without them, the skill still measures and gives you step by step instructions.
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md](SECURITY.md).
 
-For the PDF, the report script uses Playwright, Chrome or WeasyPrint, whichever is installed.
+## References
 
-## Use
-
-> Use the framer-lighthouse-100 skill on https://yoursite.com
+* Framer Help: [Site optimization](https://www.framer.com/help/articles/site-optimization/)
+* Framer Help: [Guide to Lighthouse scores](https://www.framer.com/help/articles/guide-to-lighthouse-scores/)
+* Framer blog: [Lighthouse 13.6](https://www.framer.com/blog/lighthouse-13-6/)
+* Google: [PageSpeed Insights](https://pagespeed.web.dev/) and the [PageSpeed Insights API](https://developers.google.com/speed/docs/insights/v5/get-started)
+* [Claude skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)
 
 ## License
 
-MIT
+[MIT](LICENSE). Use it, change it and share it. Keep the copyright notice.
+
+"Framer" is a trademark of Framer B.V. This project is independent and not affiliated with or endorsed by Framer or Google.

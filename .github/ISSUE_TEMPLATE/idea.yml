@@ -1,0 +1,15 @@
+name: Idea or improvement
+description: Suggest a new check, a better fix, or a change to how the skill works.
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it helps
+      description: A real case or a score it would move is the strongest argument.
