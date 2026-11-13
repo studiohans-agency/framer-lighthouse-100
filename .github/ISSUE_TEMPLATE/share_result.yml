@@ -1,0 +1,30 @@
+name: Share a result
+description: Before and after scores from a Framer site you ran the skill on.
+labels: ["result"]
+body:
+  - type: input
+    id: site
+    attributes:
+      label: Site
+      description: The URL, or a short description if you'd rather not share it (for example "coaching site, 6 pages").
+    validations:
+      required: true
+  - type: textarea
+    id: scores
+    attributes:
+      label: Scores before and after
+      placeholder: |
+        Mobile: 73 / 92 / 100 / 100 → 100 / 100 / 100 / 100
+        Desktop: 99 / 91 / 100 / 100 → 100 / 100 / 100 / 100
+    validations:
+      required: true
+  - type: textarea
+    id: fixes
+    attributes:
+      label: The fixes that mattered most
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Permission
+      options:
+        - label: It's fine to mention this result in the README (without the URL unless I add it above)

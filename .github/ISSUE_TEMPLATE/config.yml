@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/studiohans-agency/framer-lighthouse-100/blob/main/SECURITY.md
+    about: Please report security problems privately by email, not as an issue.
+  - name: Studio Hans
+    url: https://studiohans.agency
+    about: Want a Framer site built or audited for you?

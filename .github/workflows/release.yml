@@ -1,0 +1,40 @@
+name: Release
+
+# Push a tag like v1.2.0 to build the skill zip and attach it to a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the scripts
+        run: |
+          bash -n scripts/psi.sh
+          python3 -m py_compile scripts/*.py
+          node -e "for (const f of ['scripts/browser_audit.js','scripts/psi_browser.js']) new Function(require('fs').readFileSync(f,'utf8'))"
+
+      - name: Build the skill zip
+        run: |
+          V="${GITHUB_REF_NAME}"
+          mkdir -p dist/framer-lighthouse-100
+          cp -r SKILL.md README.md LICENSE CHANGELOG.md scripts components examples dist/framer-lighthouse-100/
+          cd dist && zip -qr "framer-lighthouse-100-${V}.zip" framer-lighthouse-100
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${GITHUB_REF_NAME}"
+          NOTES="Download framer-lighthouse-100-${V}.zip below. Claude app: upload it in Settings, Capabilities, Skills. Claude Code: unzip it into ~/.claude/skills/. See CHANGELOG.md for what's new."
+          if gh release view "$V" >/dev/null 2>&1; then
+            gh release upload "$V" "dist/framer-lighthouse-100-${V}.zip" --clobber
+          else
+            gh release create "$V" "dist/framer-lighthouse-100-${V}.zip" --title "$V" --notes "$NOTES"
+          fi

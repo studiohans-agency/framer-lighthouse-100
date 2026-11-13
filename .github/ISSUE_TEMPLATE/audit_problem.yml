@@ -1,0 +1,41 @@
+name: Audit problem
+description: The skill missed something, a fix didn't clear an audit, or its advice was wrong.
+labels: ["audit problem"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Site URL
+      description: The live URL, or a test copy. Leave it out if the site is private.
+      placeholder: https://example.framer.website
+  - type: textarea
+    id: scores
+    attributes:
+      label: Scores before and after
+      description: Mobile and desktop, for the four categories.
+      placeholder: |
+        Mobile: 74 / 92 / 100 / 100 → 88 / 100 / 100 / 100
+        Desktop: 96 / 92 / 100 / 100 → 100 / 100 / 100 / 100
+    validations:
+      required: true
+  - type: textarea
+    id: audit
+    attributes:
+      label: The audit that wouldn't clear
+      description: Its name and the element PageSpeed names, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What the skill did, and what actually fixed it
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How you ran it
+      multiple: true
+      options:
+        - Claude app (claude.ai or desktop)
+        - Claude Code
+        - With the Framer MCP server or plugin
+        - With Claude in Chrome or the desktop app's browser
